@@ -1,16 +1,18 @@
 package com.example.appnews
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.appnews.core.fcm.FCMUtils
 import com.example.appnews.ui.theme.AppNewsTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,13 +20,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-
-
             AppNewsTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                    TokenScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        onFetchToken = { callback ->
+                            FCMUtils.getToken(this@MainActivity) { token ->
+                                val finalToken = token ?: "Error al obtener token"
+                                Log.d("FCM_TOKEN", finalToken)
+                                callback(finalToken)
+                            }
+                        }
                     )
                 }
             }
@@ -32,20 +38,27 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
-
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+fun TokenScreen(modifier: Modifier = Modifier, onFetchToken: ((String) -> Unit) -> Unit) {
+    var token by remember { mutableStateOf("Presiona el botón para obtener el token") }
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = token, modifier = Modifier.padding(16.dp))
+        Button(onClick = { onFetchToken { newToken -> token = newToken } }) {
+            Text("Obtener Token FCM")
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun TokenScreenPreview() {
     AppNewsTheme {
-        Greeting("Android")
+        TokenScreen(onFetchToken = {})
     }
 }
+
