@@ -1,6 +1,7 @@
 package com.example.appnews.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -12,11 +13,11 @@ import com.example.appnews.register.presentation.RegisterScreen
 import com.example.appnews.register.presentation.RegisterViewModel
 import com.example.appnews.register.data.repository.RegisterRepository
 
-
 @Composable
 fun NavigationWrapper() {
     val navController = rememberNavController()
     val registerRepository = RegisterRepository()
+    val context = LocalContext.current  // Add this line to get the context
 
     NavHost(navController = navController, startDestination = "Login") {
 
@@ -39,11 +40,9 @@ fun NavigationWrapper() {
         // Pantalla de Registro
         composable("Register") {
             RegisterScreen(
-                registerViewModel = RegisterViewModel(registerRepository),
-                navigateToHome = { navController.navigate("Home") } // Agregar navegación al hogar después de registrarse
+                registerViewModel = RegisterViewModel(registerRepository, context), // Now context is available
+                navigateToHome = { navController.navigate("Home") }
             )
         }
     }
 }
-
-
