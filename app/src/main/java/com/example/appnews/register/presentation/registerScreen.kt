@@ -1,6 +1,5 @@
 package com.example.appnews.register.presentation
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +36,27 @@ fun RegisterScreen(
     val password by registerViewModel.password.observeAsState("")
     var passwordVisible by remember { mutableStateOf(false) }
     val isButtonEnabled by registerViewModel.isButtonEnabled.observeAsState(false)
+    val registrationStatus by registerViewModel.registrationStatus.observeAsState()
+
+    // Estado para el mensaje de error
+    var errorMessage by remember { mutableStateOf("") }
+    var showSnackbar by remember { mutableStateOf(false) }
+
+
+    // Observar el estado de registro
+    LaunchedEffect(registrationStatus) {
+        when (registrationStatus) {
+            is RegisterViewModel.RegistrationStatus.Success -> {
+                navigateToHome()
+            }
+            is RegisterViewModel.RegistrationStatus.Error -> {
+                // Obtener el mensaje de error
+                errorMessage = (registrationStatus as RegisterViewModel.RegistrationStatus.Error).message
+                showSnackbar = true // Mostrar Snackbar
+            }
+            else -> {}
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -76,11 +96,7 @@ fun RegisterScreen(
                     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Purple40,
-                        unfocusedBorderColor = PurpleGrey80,
-                        cursorColor = Purple40
-                    )
+                    colors = OutlinedTextFieldDefaults.colors()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -92,11 +108,7 @@ fun RegisterScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Purple40,
-                        unfocusedBorderColor = PurpleGrey80,
-                        cursorColor = Purple40
-                    )
+                    colors = OutlinedTextFieldDefaults.colors()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -114,29 +126,35 @@ fun RegisterScreen(
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Purple40,
-                        unfocusedBorderColor = PurpleGrey80,
-                        cursorColor = Purple40
-                    )
+                    colors = OutlinedTextFieldDefaults.colors()
                 )
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = { navigateToHome() },
+                    onClick = { registerViewModel.registerUser() },
                     enabled = isButtonEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF8E24AA), Color(0xFFD1C4E9))
-                            )
-                        ),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                 ) {
                     Text(text = "Registrarse", fontSize = 18.sp, color = Color.White)
                 }
+            }
+        }
+
+        // Mostrar Snackbar si hay un mensaje de error
+        if (showSnackbar) {
+            Snackbar(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.BottomCenter),
+                action = {
+                    Button(onClick = { showSnackbar = false }) {
+                        Text("Cerrar")
+                    }
+                }
+            ) {
+                Text(text = errorMessage)
             }
         }
     }
