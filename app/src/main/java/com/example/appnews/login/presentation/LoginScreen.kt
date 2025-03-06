@@ -28,18 +28,35 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 
-
 @Composable
 fun LoginScreen(
     loginViewModel: LoginViewModel,
     navigateToHome: () -> Unit,
     navigateToRegister: () -> Unit
 ) {
-    val username by loginViewModel.username.observeAsState("")
     val email by loginViewModel.email.observeAsState("")
     val password by loginViewModel.password.observeAsState("")
     var passwordVisible by remember { mutableStateOf(false) }
     val isButtonEnabled by loginViewModel.isButtonEnabled.observeAsState(false)
+    val loginStatus by loginViewModel.loginStatus.observeAsState()
+
+    // Estado para mostrar Snackbar
+    var showErrorSnackbar by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    // Observar cambios en el estado de inicio de sesión
+    LaunchedEffect(loginStatus) {
+        when (loginStatus) {
+            is LoginViewModel.LoginStatus.Success -> {
+                navigateToHome()
+            }
+            is LoginViewModel.LoginStatus.Error -> {
+                errorMessage = (loginStatus as LoginViewModel.LoginStatus.Error).message
+                showErrorSnackbar = true
+            }
+            else -> {}
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -73,22 +90,6 @@ fun LoginScreen(
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { loginViewModel.onUsernameChanged(it) },
-                    label = { Text("Usuario") },
-                    singleLine = true,
-                    leadingIcon = { Icon(imageVector = Icons.Filled.Person, contentDescription = "Usuario") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF4A148C),
-                        unfocusedBorderColor = PurpleGrey80,
-                        cursorColor = Color(0xFF4A148C)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = email,
@@ -131,7 +132,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = { navigateToHome() },
+                    onClick = { loginViewModel.login() },
                     enabled = isButtonEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -151,6 +152,22 @@ fun LoginScreen(
                         color = Color(0xFF4A148C)
                     )
                 )
+            }
+
+            // Mostrar Snackbar de error
+            if (showErrorSnackbar) {
+                Snackbar(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    action = {
+                        TextButton(onClick = { showErrorSnackbar = false }) {
+                            Text("Cerrar")
+                        }
+                    }
+                ) {
+                    Text(text = errorMessage)
+                }
             }
         }
     }

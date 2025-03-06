@@ -5,14 +5,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.appnews.core.fcm.FCMUtils
 import com.example.appnews.register.data.model.CreateUserRequest
 import com.example.appnews.register.data.repository.RegisterRepository
 import kotlinx.coroutines.launch
 
 class RegisterViewModel(
     private val registerRepository: RegisterRepository,
-    private val context: Context // Add context to retrieve FCM token
+    private val context: Context
 ) : ViewModel() {
 
     private val _username = MutableLiveData("")
@@ -34,12 +33,14 @@ class RegisterViewModel(
     val registrationStatus: LiveData<RegistrationStatus> = _registrationStatus
 
     init {
-        // Retrieve FCM token when ViewModel is created
-        retrieveFCMToken()
+        // Solicitar FCM Token
+        requestFCMToken()
     }
 
-    private fun retrieveFCMToken() {
-        FCMUtils.getToken(context) { token ->
+    private fun requestFCMToken() {
+        // Implementa la lógica para obtener el FCM Token
+        // Por ejemplo, usando FCMUtils
+        com.example.appnews.core.fcm.FCMUtils.getToken(context) { token ->
             token?.let {
                 _fcmToken.postValue(it)
             }
@@ -72,9 +73,9 @@ class RegisterViewModel(
         viewModelScope.launch {
             val token = _fcmToken.value
             if (token.isNullOrBlank()) {
-                // If token is not available, try to retrieve it again
-                retrieveFCMToken()
-                _registrationStatus.value = RegistrationStatus.Error("FCM Token not available")
+                // Si el token no está disponible, solicitar uno de nuevo
+                requestFCMToken()
+                _registrationStatus.value = RegistrationStatus.Error("Token FCM no disponible")
                 return@launch
             }
 
@@ -86,11 +87,12 @@ class RegisterViewModel(
             )
 
             val result = registerRepository.createUser(request)
+
             if (result.isSuccess) {
                 _registrationStatus.value = RegistrationStatus.Success
             } else {
                 _registrationStatus.value = RegistrationStatus.Error(
-                    result.exceptionOrNull()?.message ?: "Unknown error"
+                    result.exceptionOrNull()?.message ?: "Error desconocido"
                 )
             }
         }
