@@ -10,11 +10,13 @@ import com.example.appnews.login.presentation.LoginScreen
 import com.example.appnews.login.presentation.LoginViewModel
 import com.example.appnews.register.presentation.RegisterScreen
 import com.example.appnews.register.presentation.RegisterViewModel
+import com.example.appnews.register.data.repository.RegisterRepository
 
 
 @Composable
 fun NavigationWrapper() {
     val navController = rememberNavController()
+    val registerRepository = RegisterRepository()
 
     NavHost(navController = navController, startDestination = "Login") {
 
@@ -37,7 +39,7 @@ fun NavigationWrapper() {
         // Pantalla de Registro
         composable("Register") {
             RegisterScreen(
-                registerViewModel = RegisterViewModel(),
+                registerViewModel = RegisterViewModel(registerRepository),
                 navigateToHome = { navController.navigate("Home") } // Agregar navegación al hogar después de registrarse
             )
         }

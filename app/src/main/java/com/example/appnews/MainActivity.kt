@@ -18,16 +18,13 @@ import androidx.compose.ui.unit.dp
 import com.example.appnews.core.fcm.FCMUtils
 import com.example.appnews.ui.theme.AppNewsTheme
 
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            NavigationWrapper()
-        }
-    }
-}
-
             AppNewsTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     TokenScreen(
@@ -69,4 +66,6 @@ fun TokenScreenPreview() {
         TokenScreen(onFetchToken = {})
     }
 }
+
+
 
