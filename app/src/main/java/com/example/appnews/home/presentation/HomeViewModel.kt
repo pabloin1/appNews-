@@ -1,54 +1,51 @@
 package com.example.appnews.home.presentation
 
-
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.appnews.home.data.model.NewsDTO
+import com.example.appnews.home.data.repository.NewsRepository
 import kotlinx.coroutines.launch
 
-data class Item(val id: Int, val title: String)
+class HomeViewModel(
+    private val context: Context,
+    private val newsRepository: NewsRepository = NewsRepository(context)
+) : ViewModel() {
 
-class HomeViewModel : ViewModel() {
-    // LiveData para mantener el estado de los items
-    private val _items = MutableLiveData<List<Item>>()
-    val items: LiveData<List<Item>> get() = _items
+    // Estado de las noticias
+    private val _newsList = MutableLiveData<List<NewsDTO>>()
+    val newsList: LiveData<List<NewsDTO>> = _newsList
 
-    // LiveData para manejar el estado de carga
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> get() = _isLoading
+    // Estado de carga
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
 
-    // LiveData para manejar errores
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> get() = _error
+    // Estado de error
+    private val _errorMessage = MutableLiveData<String?>(null)
+    val errorMessage: LiveData<String?> = _errorMessage
 
-    init {
-        loadData() // Cargar datos al inicializar el ViewModel
-    }
-
-    // Función para cargar datos
-    private fun loadData() {
-        _isLoading.value = true
-        _error.value = null // Reiniciar error
-
+    // Función para cargar noticias
+    fun loadNews() {
         viewModelScope.launch {
-            // Simulación de una carga de datos (puedes reemplazar esto con una llamada a un repositorio)
-            try {
-                // Simula un retraso de 2 segundos
-                kotlinx.coroutines.delay(2000)
-                // Carga de datos de ejemplo
-                val loadedItems = List(10) { Item(it, "Item #$it") }
-                _items.value = loadedItems
-            } catch (e: Exception) {
-                _error.value = "Error al cargar los datos"
-            } finally {
-                _isLoading.value = false
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            val result = newsRepository.getNews()
+
+            if (result.isSuccess) {
+                _newsList.value = result.getOrNull() ?: emptyList()
+            } else {
+                _errorMessage.value = result.exceptionOrNull()?.message ?: "Error al cargar noticias"
             }
+
+            _isLoading.value = false
         }
     }
 
-    // Función para reiniciar el error
-    fun clearError() {
-        _error.value = null
+    // Inicializar carga de noticias
+    init {
+        loadNews()
     }
 }
