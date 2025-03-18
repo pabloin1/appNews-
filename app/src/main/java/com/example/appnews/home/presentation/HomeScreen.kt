@@ -8,11 +8,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -26,15 +30,21 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+
+
+// HomeScreen Composable
 @Composable
 fun HomeScreen(
-    HomeViewModel: HomeViewModel,
+    homeViewModel: HomeViewModel,
     onNewsClick: (newsId: String, newsTitle: String) -> Unit = { _, _ -> },
     onCreateNewsClick: () -> Unit = {}
 ) {
-    val newsList by HomeViewModel.newsList.observeAsState(emptyList())
-    val isLoading by HomeViewModel.isLoading.observeAsState(false)
-    val errorMessage by HomeViewModel.errorMessage.observeAsState()
+    val newsList by homeViewModel.newsList.observeAsState(emptyList())
+    val isLoading by homeViewModel.isLoading.observeAsState(false)
+    val errorMessage by homeViewModel.errorMessage.observeAsState()
+
+    // Como no hay estado de modo offline en el ViewModel, lo manejamos localmente en el composable
+    var isOfflineMode by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -56,13 +66,37 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Noticias",
+                    text = if (isOfflineMode) "Noticias (Offline)" else "Noticias",
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge
                 )
 
                 Row {
-                    IconButton(onClick = { HomeViewModel.loadNews() }) {
+                    // Switch para modo offline
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = "Offline",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Switch(
+                            checked = isOfflineMode,
+                            onCheckedChange = {
+                                isOfflineMode = it
+                                homeViewModel.loadNews(isOfflineMode)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = PurpleGrey80
+                            )
+                        )
+                    }
+
+                    IconButton(onClick = { homeViewModel.loadNews(isOfflineMode) }) {
                         Icon(
                             Icons.Filled.Refresh,
                             contentDescription = "Recargar noticias",
@@ -95,7 +129,7 @@ fun HomeScreen(
                     errorMessage != null -> {
                         ErrorContent(
                             errorMessage = errorMessage!!,
-                            onRetry = { HomeViewModel.loadNews() }
+                            onRetry = { homeViewModel.loadNews(isOfflineMode) }
                         )
                     }
                     newsList.isEmpty() -> {
@@ -105,39 +139,46 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "No hay noticias disponibles",
+                                text = if (isOfflineMode)
+                                    "No hay noticias descargadas"
+                                else
+                                    "No hay noticias disponibles",
                                 color = Color.White
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Button(
-                                onClick = onCreateNewsClick,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Purple40
-                                )
-                            ) {
-                                Icon(
-                                    Icons.Filled.Add,
-                                    contentDescription = "Crear noticia"
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Crear noticia")
+                            if (!isOfflineMode) {
+                                Button(
+                                    onClick = onCreateNewsClick,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Purple40
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Add,
+                                        contentDescription = "Crear noticia"
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Crear noticia")
+                                }
                             }
                         }
                     }
                     else -> {
                         NewsList(
                             news = newsList,
-                            onNewsClick = onNewsClick
+                            onNewsClick = onNewsClick,
+                            onDownloadClick = { newsId -> homeViewModel.downloadNews(newsId) },
+                            isOfflineMode = isOfflineMode
                         )
                     }
                 }
             }
         }
 
-        // Botón flotante para crear noticias
-        if (newsList.isNotEmpty()) {
+        // Botón flotante para crear noticias (solo visible en modo online)
+        if (newsList.isNotEmpty() && !isOfflineMode) {
             FloatingActionButton(
                 onClick = onCreateNewsClick,
                 modifier = Modifier
@@ -158,7 +199,9 @@ fun HomeScreen(
 @Composable
 fun NewsList(
     news: List<NewsDTO>,
-    onNewsClick: (newsId: String, newsTitle: String) -> Unit
+    onNewsClick: (newsId: String, newsTitle: String) -> Unit,
+    onDownloadClick: (String) -> Unit,
+    isOfflineMode: Boolean
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -166,7 +209,9 @@ fun NewsList(
         items(news) { newsItem ->
             NewsItemCard(
                 newsItem = newsItem,
-                onNewsClick = onNewsClick
+                onNewsClick = onNewsClick,
+                onDownloadClick = onDownloadClick,
+                isOfflineMode = isOfflineMode
             )
         }
     }
@@ -175,7 +220,9 @@ fun NewsList(
 @Composable
 fun NewsItemCard(
     newsItem: NewsDTO,
-    onNewsClick: (newsId: String, newsTitle: String) -> Unit
+    onNewsClick: (newsId: String, newsTitle: String) -> Unit,
+    onDownloadClick: (String) -> Unit,
+    isOfflineMode: Boolean
 ) {
     Card(
         modifier = Modifier
@@ -210,20 +257,40 @@ fun NewsItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Botón para ver comentarios
-                TextButton(
-                    onClick = { onNewsClick(newsItem.id, newsItem.title) },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = Purple40
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Comment,
-                        contentDescription = "Ver comentarios",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Comentarios")
+                Row {
+                    // Botón para descargar noticia (solo visible en modo online)
+                    if (!isOfflineMode) {
+                        TextButton(
+                            onClick = { onDownloadClick(newsItem.id) },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = Purple40
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Descargar noticia",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Descargar")
+                        }
+                    }
+
+                    // Botón para ver comentarios
+                    TextButton(
+                        onClick = { onNewsClick(newsItem.id, newsItem.title) },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Purple40
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Comment,
+                            contentDescription = "Ver comentarios",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Comentarios")
+                    }
                 }
             }
         }

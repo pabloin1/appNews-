@@ -42,7 +42,7 @@ fun NavigationWrapper() {
         // Pantalla Home
         composable("Home") {
             HomeScreen(
-                HomeViewModel = HomeViewModel(context),
+                homeViewModel = HomeViewModel(context),
                 onNewsClick = { newsId, newsTitle ->
                     try {
                         // Navegar a la pantalla de comentarios con el ID y título de la noticia
