@@ -1,7 +1,7 @@
 package com.example.appnews.core.data.local.comments.dao
 
 import androidx.room.*
-import com.example.appnews.data.local.comments.entities.CommentEntity
+import com.example.appnews.core.data.local.comments.entities.CommentEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

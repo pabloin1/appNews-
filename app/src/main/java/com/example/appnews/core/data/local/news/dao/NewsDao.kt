@@ -15,6 +15,9 @@ interface NewsDao {
     @Query("SELECT * FROM news WHERE isDownloaded = 1")
     suspend fun getDownloadedNews(): List<NewsEntity>
 
+    @Query("SELECT * FROM news WHERE id = :newsId LIMIT 1")
+    suspend fun getNewsById(newsId: String): NewsEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNews(news: List<NewsEntity>)
 

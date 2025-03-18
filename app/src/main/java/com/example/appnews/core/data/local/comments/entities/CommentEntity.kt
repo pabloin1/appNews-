@@ -3,19 +3,21 @@ package com.example.appnews.core.data.local.comments.entities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.example.appnews.data.local.news.entities.NewsEntity
+import com.example.appnews.core.data.local.news.entities.NewsEntity
 
 @Entity(
     tableName = "comments",
     foreignKeys = [
         ForeignKey(
             entity = NewsEntity::class,
-            parentColumns = ["id"],  // Changed from "_id" to "id"
+            parentColumns = ["id"],
             childColumns = ["news_id"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["news_id"])]  // Añadimos un índice para la columna news_id
 )
 data class CommentEntity(
     @PrimaryKey

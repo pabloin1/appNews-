@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:networkSecurityConfig="@xml/network_security_config"
@@ -23,14 +25,11 @@
             android:theme="@style/Theme.AppNews">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-
+        <!-- Servicio FCM -->
         <service
             android:name=".core.fcm.FCMService"
             android:exported="false">
@@ -38,6 +37,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Servicio de descarga de noticias -->
+        <service
+            android:name=".core.services.NewsDownloadService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>
