@@ -21,7 +21,7 @@ class HomeViewModel(
     private val context: Context,
     private val remoteNewsRepository: NewsRepository,
     private val localNewsRepository: LocalNewsRepository
-) : ViewModel(), NewsDownloadService.DownloadCallback {
+) : ViewModel() {
 
     // Estado de las noticias
     private val _newsList = MutableLiveData<List<NewsDTO>>()
@@ -39,52 +39,9 @@ class HomeViewModel(
     private val _downloadStatus = MutableLiveData<String?>(null)
     val downloadStatus: LiveData<String?> = _downloadStatus
 
-    // Estado de descarga (progreso)
-    private val _downloadProgress = MutableLiveData<Pair<Int, Int>?>(null)
-    val downloadProgress: LiveData<Pair<Int, Int>?> = _downloadProgress
-
-    // Conexión al servicio
-    private var downloadService: NewsDownloadService? = null
-    private var bound = false
-
-    // Conexión al servicio
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as NewsDownloadService.LocalBinder
-            downloadService = binder.getService()
-            binder.registerCallback(this@HomeViewModel)
-            bound = true
-            Log.d(TAG, "Servicio de descarga conectado")
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            downloadService = null
-            bound = false
-            Log.d(TAG, "Servicio de descarga desconectado")
-        }
-    }
-
     init {
         Log.d(TAG, "Inicializando HomeViewModel")
-        bindService()
         loadNews()
-    }
-
-    private fun bindService() {
-        val intent = Intent(context, NewsDownloadService::class.java)
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-    }
-
-    private fun unbindService() {
-        if (bound) {
-            val binder = downloadService?.let { service ->
-                (service as? NewsDownloadService.LocalBinder)?.also {
-                    it.unregisterCallback(this)
-                }
-            }
-            context.unbindService(serviceConnection)
-            bound = false
-        }
     }
 
     // Función para cargar noticias (desde la API o Room)
@@ -160,55 +117,17 @@ class HomeViewModel(
         }
     }
 
-    // Función para descargar multiples noticias usando el servicio
-    fun downloadNewsWithService(newsIds: List<String>) {
-        if (newsIds.isEmpty()) {
-            _errorMessage.value = "No hay noticias seleccionadas para descargar"
-            return
-        }
-
-        Log.d(TAG, "Iniciando descarga de ${newsIds.size} noticias con servicio")
-        NewsDownloadService.startDownload(context, newsIds)
-
-        _downloadStatus.value = "Iniciando descarga de ${newsIds.size} noticias..."
-    }
-
-    // Función para descargar una noticia (modificada para usar el servicio)
+    // Función para descargar una noticia (usando el servicio en primer plano)
     fun downloadNews(newsId: String) {
-        downloadNewsWithService(listOf(newsId))
+        Log.d(TAG, "Iniciando descarga de noticia con ID: $newsId")
+        // Iniciar servicio en primer plano para la descarga
+        NewsDownloadService.startDownload(context, listOf(newsId))
+
+        // Solo mostrar mensaje en la aplicación, pero no el progreso
+        _downloadStatus.value = "Descarga iniciada. Verifica la notificación para ver el progreso."
     }
 
-    // Implementación de callbacks del servicio
-    override fun onProgressUpdate(progress: Int, total: Int) {
-        Log.d(TAG, "Progreso de descarga: $progress/$total")
-        _downloadProgress.postValue(Pair(progress, total))
-        _downloadStatus.postValue("Descargando noticias: $progress de $total")
-    }
-
-    override fun onDownloadComplete() {
-        Log.d(TAG, "Descarga completada")
-        _downloadProgress.postValue(null)
-        _downloadStatus.postValue("Descarga completada")
-        viewModelScope.launch {
-            loadNews() // Recargar noticias para reflejar las descargas
-        }
-    }
-
-    override fun onDownloadError(error: String) {
-        Log.e(TAG, "Error en descarga: $error")
-        _downloadProgress.postValue(null)
-        _errorMessage.postValue("Error en la descarga: $error")
-    }
-
-    // Función para cancelar la descarga actual
-    fun cancelDownload() {
-        Log.d(TAG, "Cancelando descarga")
-        NewsDownloadService.stopDownload(context)
-        _downloadProgress.value = null
-        _downloadStatus.value = "Descarga cancelada"
-    }
-
-    // Función para descargar todas las noticias visibles
+    // Método para descargar todas las noticias visibles
     fun downloadAllVisibleNews() {
         val newsToDownload = _newsList.value?.map { it.id } ?: emptyList()
 
@@ -217,12 +136,16 @@ class HomeViewModel(
             return
         }
 
-        downloadNewsWithService(newsToDownload)
+        Log.d(TAG, "Iniciando descarga de todas las noticias: ${newsToDownload.size}")
+        NewsDownloadService.startDownload(context, newsToDownload)
+        _downloadStatus.value = "Descarga iniciada. Verifica la notificación para ver el progreso."
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        unbindService()
+    // Cancelar la descarga actual
+    fun cancelDownload() {
+        Log.d(TAG, "Cancelando descarga")
+        NewsDownloadService.stopDownload(context)
+        _downloadStatus.value = "Descarga cancelada"
     }
 
     companion object {

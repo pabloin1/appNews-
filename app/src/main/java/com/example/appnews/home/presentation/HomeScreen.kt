@@ -37,7 +37,6 @@ fun HomeScreen(
     val isLoading by homeViewModel.isLoading.observeAsState(false)
     val errorMessage by homeViewModel.errorMessage.observeAsState()
     val downloadStatus by homeViewModel.downloadStatus.observeAsState()
-    val downloadProgress by homeViewModel.downloadProgress.observeAsState()
 
     // Si estamos en modo offline, automáticamente activar el modo offline
     LaunchedEffect(isOffline) {
@@ -253,42 +252,6 @@ fun HomeScreen(
                         )
                     }
                 }
-
-                // Mostrar barra de progreso de descarga
-                downloadProgress?.let { (progress, total) ->
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .background(Color(0xEE000000))
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Descargando noticias: $progress de $total",
-                            color = Color.White,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        LinearProgressIndicator(
-                            progress = progress.toFloat() / total.toFloat(),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
-                            color = Color(0xFF4CAF50)
-                        )
-
-                        // Botón para cancelar descarga
-                        TextButton(
-                            onClick = { homeViewModel.cancelDownload() },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text(
-                                text = "Cancelar",
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
             }
         }
 
@@ -309,8 +272,8 @@ fun HomeScreen(
             }
         }
 
-        // Mostrar Snackbar de descarga (solo si no hay progreso visible)
-        if (showDownloadSnackbar && downloadProgress == null) {
+        // Mostrar Snackbar de descarga
+        if (showDownloadSnackbar) {
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -492,6 +455,6 @@ fun formatDate(dateString: String): String {
             .withZone(ZoneId.systemDefault())
         formatter.format(instant)
     } catch (e: Exception) {
-        dateString // Devolver la fecha original si hay un error
+        dateString
     }
 }
